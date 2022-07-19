@@ -26,6 +26,10 @@ async function main() {
   await memePoolPair.deployed();
   console.log("MemePoolPair deployed to:", memePoolPair.address);
 
+  const MemeMarket = await hre.ethers.getContractFactory("MemeMarket");
+  const memeMarket = await MemeMarket.deploy();
+  await memeMarket.deployed();
+  console.log("MemeMarket deployed to:", memeMarket.address);
 }
 main().then(() => process.exit(0)).catch(error => {
   console.error(error);
