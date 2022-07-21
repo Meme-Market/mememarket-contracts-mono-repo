@@ -11,10 +11,11 @@ contract MemeMarket is ERC1155, AccessControl {
 
     uint256 public constant ONE_TOKEN =  (10 ** 6);
     uint256 public constant ONE_CURRENCY_TOKEN =  (10 ** 18);
-
     uint256 public constant COST_PER_TOKEN = (10 ** 16);
+    uint256 public constant BASE_PERCENTAGE = 100;
 
-    address public constant MEME_MARKET_FEE_ADDRESS = 0x212D3f1a1F31f86d87dA3361B12F31bFC0dfa891;
+    uint256 public platformFeePercentage = 0;
+    address public platformFeeAddress;
 
     IERC20 public currencyToken;
 
@@ -33,11 +34,32 @@ contract MemeMarket is ERC1155, AccessControl {
     constructor()
         ERC1155("")
     {
-        currencyToken = IERC20(0x8fFD55FBa9caDB8d018b2E2E021D086AA690e88e);
+        currencyToken = IERC20(0xd9145CCE52D386f254917e481eB44e9943F39138);
+
+        platformFeePercentage = uint256(5);
+        platformFeeAddress = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(MODERATOR_ROLE, msg.sender);
+    }
+
+    function setURI(
+        string memory _newuri
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setURI(_newuri);
+    }
+
+    function setPlatformFee(
+        uint256 _newFee
+    ) public onlyRole(ADMIN_ROLE) {
+        platformFeePercentage = _newFee;
+    }
+
+    function setPlatformFeeAddress(
+        address _address
+    ) public onlyRole(ADMIN_ROLE) {
+        platformFeeAddress = _address;
     }
 
     function createMeme(
@@ -52,93 +74,103 @@ contract MemeMarket is ERC1155, AccessControl {
         memeTokenPrices[_newTokenId] = 0;
     }
 
-    function setURI(
-        string memory _newuri
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setURI(_newuri);
-    }
-
     function getBuyPrice(string memory _memeId) public view returns (uint256) {
+        require(uint256(memeTokens[_memeId]) > 0, "Meme doesn't exist!");
+
         return memeTokenPrices[memeTokens[_memeId]] + COST_PER_TOKEN;
     }
 
-    function buy(string memory _memeId, uint256 _funds) public {
+    function calculateBuyPrice(string memory _memeId, uint256 _shares) public view returns (uint256, uint256, uint256, uint256) {
         require(uint256(memeTokens[_memeId]) > 0, "Meme doesn't exist!");
 
         uint256 _currentPrice = getBuyPrice(_memeId);
 
-        require( _funds >= _currentPrice, "Insufficient funds provided!" );
-
-        uint256 _totaltokensToBuy = 1;
-        uint256 _totalBuyPrice = _currentPrice;
+        uint256 _sharesToBuy = ONE_TOKEN;
+        uint256 _totalPrice = _currentPrice;
         uint256 _newPrice = _currentPrice;
-
+        
         while(true) {
 
-            uint256 _tempNewPrice = _newPrice + COST_PER_TOKEN;
-            uint256 _tenpTotalBuyPrice = _totalBuyPrice + _tempNewPrice;
-
-            if(_funds < _tenpTotalBuyPrice) {
+            if(_sharesToBuy >= _shares) {
                 break;
-            }
+            } 
 
             _newPrice += COST_PER_TOKEN;
-            _totalBuyPrice += _newPrice;
-            _totaltokensToBuy++; 
+            _totalPrice += _newPrice;
+            _sharesToBuy += ONE_TOKEN;
         }
 
-        /*
-        uint256 _allowance = currencyToken.allowance(msg.sender, address(this));
-        if(_totalBuyPrice < _allowance) {
-            currencyToken.approve(address(this), _totalBuyPrice - _allowance);
-        }
-        */
-        
-        // Need to integrate charging people w/ $MEEM erc20 token
-        //currencyToken.transferFrom(msg.sender, address(this), _amount);
+        uint256 _totalFee = SafeMath.div((_totalPrice * platformFeePercentage), BASE_PERCENTAGE);
+        uint256 _grandTotal = (_totalPrice + _totalFee);
+
+        return (_totalPrice, _totalFee, _grandTotal, _newPrice);
+    }
+
+    function buy(string memory _memeId, uint256 _shares) public payable {
+        require(uint256(memeTokens[_memeId]) > 0, "Meme doesn't exist!");
+
+        (, uint256 _totalFee, uint256 _grandTotal, uint256 _newPrice) = calculateBuyPrice(_memeId, _shares);
+
+        require(currencyToken.balanceOf(msg.sender) >= _grandTotal, "You have insufficient funds!");
+        require(_getAllowance() >= _grandTotal, "Insufficient allowance!");
+
+        currencyToken.transferFrom(msg.sender, address(this), _grandTotal);
+
+        // Collect platform fee
+        currencyToken.transfer(platformFeeAddress, _totalFee);
 
         uint256 _tokenId = memeTokens[_memeId];
-        _mint(msg.sender, _tokenId, _totaltokensToBuy * ONE_TOKEN, '');
+        _mint(msg.sender, _tokenId, _shares, '');
 
         _updateMemeTokenPrice(_tokenId, _newPrice);  
     }
 
     function getSellPrice(string memory _memeId) public view returns (uint256) {
+        require(uint256(memeTokens[_memeId]) > 0, "Meme doesn't exist!");
+
         return memeTokenPrices[memeTokens[_memeId]];
     }
 
-    function sell(string memory _memeId, uint256 _tokensToSell) public {
+    function calculateSellPrice(string memory _memeId, uint256 _shares) public view returns (uint256, uint256, uint256, uint256) {
         require(uint256(memeTokens[_memeId]) > 0, "Meme doesn't exist!");
-
-        // check to make sure sender has enough token balance
 
         uint256 _currentPrice = getSellPrice(_memeId);
 
-        require( _tokensToSell > 0, "Need higher than 1 tokens to sell!" );
-
-        uint256 _totaltokensToSell = 0;
-        uint256 _totalSellPrice = _currentPrice;
+        uint256 _sharesToSell = 0;
+        uint256 _totalPrice = _currentPrice;
         uint256 _newPrice = _currentPrice;
-
+        
         while(true) {
 
-            //uint256 _tempNewPrice = _newPrice - COST_PER_TOKEN;
-            //uint256 _tenpTotalSellPrice = _totalSellPrice + _tempNewPrice;
-
-            if(_totaltokensToSell >= _tokensToSell) {
+            if(_sharesToSell >= _shares || _totalPrice <= 0) {
                 break;
             }
 
             _newPrice -= COST_PER_TOKEN;
-            _totalSellPrice += _newPrice;
-            _totaltokensToSell += ONE_TOKEN; 
+            _totalPrice += _newPrice;
+            _sharesToSell += ONE_TOKEN; 
         }
 
-        // Need to integrate refunding people w/ $MEEM erc20 token
-        //currencyToken.transferFrom(msg.sender, address(this), _amount);
+        uint256 _totalFee = SafeMath.div((_totalPrice * platformFeePercentage), BASE_PERCENTAGE);
+        uint256 _grandTotal = (_totalPrice - _totalFee);
+
+        return (_totalPrice, _totalFee, _grandTotal, _newPrice);
+    }
+
+    function sell(string memory _memeId, uint256 _shares) public {
+        require(uint256(memeTokens[_memeId]) > 0, "Meme doesn't exist!");
+
+        (, uint256 _totalFee, uint256 _grandTotal, uint256 _newPrice) = calculateSellPrice(_memeId, _shares);
+
+        require(currencyToken.balanceOf(address(this)) >= _grandTotal, "Platform has insufficient funds!");
+
+        // Collect platform fee
+        currencyToken.transfer(platformFeeAddress, _totalFee);
+
+        currencyToken.transfer(msg.sender, _grandTotal);
 
         uint256 _tokenId = memeTokens[_memeId];
-        _burn(msg.sender, _tokenId, _totaltokensToSell);
+        _burn(msg.sender, _tokenId, _shares);
 
         _updateMemeTokenPrice(_tokenId, _newPrice);
     }
@@ -150,6 +182,10 @@ contract MemeMarket is ERC1155, AccessControl {
 
     function _updateMemeTokenPrice(uint256 _tokenId, uint256 amount) private {
         memeTokenPrices[_tokenId] = amount;
+    }
+
+    function _getAllowance() private view returns(uint256){
+        return currencyToken.allowance(msg.sender, address(this));
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, AccessControl) returns (bool) {
@@ -167,5 +203,4 @@ contract MemeMarket is ERC1155, AccessControl {
     function onERC721Received(address, address, uint256, bytes memory) public virtual returns (bytes4) {
         return this.onERC721Received.selector;
     }
-
 }
