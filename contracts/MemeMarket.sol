@@ -3,8 +3,9 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MemeMarket is ERC1155 {
+contract MemeMarket is ERC1155, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
@@ -14,8 +15,7 @@ contract MemeMarket is ERC1155 {
     constructor() public ERC1155("") {}
 
 
-    // onlyOwner modifier add
-    function mint(string memory memeName, string memory memeImageURI) public {
+    function mint(string memory memeName, string memory memeImageURI) public onlyOwner {
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
         _mint(address(this), newItemId, 1 * (10 ** 6), '');
@@ -27,11 +27,18 @@ contract MemeMarket is ERC1155 {
     // to address must call setApprovalForAll
     function tradeBuyMeme(uint256 memeId, uint256 amount) public {
         require(balanceOf(address(this), memeId) >= amount);
+
+        setApprovalForAll(msg.sender, true);
+
+        // corss reference erc20 smart contract address 
+        // call setApprovalForAll()
         safeTransferFrom(address(this), msg.sender, memeId, amount, '');
         _updateMemePrice(memeId, 10 * amount, true);
     }
 
     function tradeSellMeme(uint256 memeId, uint256 amount) public {
+        setApprovalForAll(msg.sender, true);
+
         safeTransferFrom(msg.sender, address(this), memeId, amount, '');
         _updateMemePrice(memeId, 10 * amount, false);
     }
