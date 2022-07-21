@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract MemeMarket is ERC1155, AccessControl {
+contract MemeStonk is ERC1155, AccessControl {
 
     uint256 public constant ONE_TOKEN =  (10 ** 6);
     uint256 public constant ONE_CURRENCY_TOKEN =  (10 ** 18);
