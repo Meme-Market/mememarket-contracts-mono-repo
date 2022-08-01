@@ -1,4 +1,14 @@
 {
+  "name": "mememarket-contracts",
+  "version": "1.0.0",
+  "description": "MemeMarket blockchain smart contracts",
+  "author": "bhargav@meme.market",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/1-deploy-script.js --network"
+  },
   "devDependencies": {
     "@ethersproject/providers": "^5.6.8",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.2",
@@ -22,6 +32,7 @@
   "dependencies": {
     "@chainlink/contracts": "^0.4.1",
     "@openzeppelin/contracts": "^4.7.0",
+    "@openzeppelin/contracts-upgradeable": "^4.7.2",
     "dotenv": "^16.0.1"
   }
 }

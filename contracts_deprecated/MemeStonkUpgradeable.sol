@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract MemeStonk is ERC1155, AccessControl {
+contract MemeStonk is Initializable, ERC1155Upgradeable, AccessControlUpgradeable, UUPSUpgradeable {
 
     /*///////////////////////////////////////////////////////////////////
     EVENTS
@@ -43,7 +45,7 @@ contract MemeStonk is ERC1155, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
 
-    uint256 public constant ONE_STONK =  (10 ** 6);
+    uint256 public constant ONE_STONK =  (10 ** 18);
     uint256 public constant ONE_COLLATERAL_TOKEN =  (10 ** 18);
     uint256 public constant COST_PER_STONK = (10 ** 16);
     uint256 public constant BASE_PERCENTAGE = 100;
@@ -73,11 +75,19 @@ contract MemeStonk is ERC1155, AccessControl {
     uint256 public platformFeePercentage = 0;
     address public platformFeeAddress;
 
-    constructor(
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _collateralToken, 
         uint256 _platformFee, 
         address _platformFeeAddress
-    ) ERC1155("") {
+    ) initializer public {
+        __ERC1155_init("");
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
         collateralToken = IERC20(_collateralToken);
 
         platformFeePercentage = _platformFee;
@@ -86,13 +96,17 @@ contract MemeStonk is ERC1155, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(MODERATOR_ROLE, msg.sender);
-
-        setApprovalForAll(address(this), true);
     }
 
     /*///////////////////////////////////////////////////////////////////
     PUBLIC FUNCTIONS
     //////////////////////////////////////////////////////////////////*/
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        onlyRole(ADMIN_ROLE)
+        override
+    {}
 
     function setURI(
         string memory _newuri
@@ -288,9 +302,12 @@ contract MemeStonk is ERC1155, AccessControl {
         return memes[_memeId].stonkTokenId > 0;
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(ERC1155, AccessControl) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC1155Upgradeable, AccessControlUpgradeable)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
 

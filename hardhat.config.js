@@ -4,11 +4,19 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 
 module.exports = {
-  defaultNetwork: "matic",
+  defaultNetwork: "mumbai",
   networks: {
     hardhat: {},
     matic: {
+      url: "https://polygon-rpc.com",
+      accounts: [process.env.PRIVATE_KEY],
+    },
+    mumbai: {
       url: "https://rpc-mumbai.maticvigil.com",
+      accounts: [process.env.PRIVATE_KEY],
+    },
+    ganache: {
+      url: "http://127.0.01:8545",
       accounts: [process.env.PRIVATE_KEY],
     },
   },
@@ -16,7 +24,7 @@ module.exports = {
     apiKey: process.env.POLYGONSCAN_API_KEY,
   },
   solidity: {
-    version: "0.8.4",
+    version: "0.8.7",
     settings: {
       optimizer: {
         enabled: true,

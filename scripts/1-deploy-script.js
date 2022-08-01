@@ -1,37 +1,20 @@
 const hre = require("hardhat");
 async function main() {
+  const FEE_WALLET = process.env.FEE_WALLET;
 
-  const MemeERC20 = await hre.ethers.getContractFactory("MemeERC20");
-  const memeERC20 = await MemeERC20.deploy();
-  await memeERC20.deployed();
-  console.log("MemeERC20 deployed to:", memeERC20.address);
+  const Memera = await hre.ethers.getContractFactory("Memera");
+  const memera = await Memera.deploy();
+  await memera.deployed();
+  console.log("Memera deployed to:", memera.address);
 
-  const MemeERC721 = await hre.ethers.getContractFactory("MemeERC721");
-  const memeERC721 = await MemeERC721.deploy();
-  await memeERC721.deployed();
-  console.log("MemeERC721 deployed to:", memeERC721.address);
-
-  const MemePoolFactory = await hre.ethers.getContractFactory("MemePoolFactory");
-  const memePoolFactory = await MemePoolFactory.deploy();
-  await memePoolFactory.deployed();
-  console.log("MemePoolFactory deployed to:", memePoolFactory.address);
-
-  const MemePoolLiquidity = await hre.ethers.getContractFactory("MemePoolLiquidity");
-  const memePoolLiquidity = await MemePoolLiquidity.deploy();
-  await memePoolLiquidity.deployed();
-  console.log("MemePoolLiquidity deployed to:", memePoolLiquidity.address);
-
-  const MemePoolPair = await hre.ethers.getContractFactory("MemePoolPair");
-  const memePoolPair = await MemePoolPair.deploy();
-  await memePoolPair.deployed();
-  console.log("MemePoolPair deployed to:", memePoolPair.address);
-
-  const MemeMarket = await hre.ethers.getContractFactory("MemeMarket");
-  const memeMarket = await MemeMarket.deploy();
-  await memeMarket.deployed();
-  console.log("MemeMarket deployed to:", memeMarket.address);
+  const MemeStonk = await hre.ethers.getContractFactory("MemeStonk");
+  const memeStonk = await MemeStonk.deploy(memera.address, 5, FEE_WALLET);
+  await memeStonk.deployed();
+  console.log("MemeStonk deployed to:", memeStonk.address);
 }
-main().then(() => process.exit(0)).catch(error => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
