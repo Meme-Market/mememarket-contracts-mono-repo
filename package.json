@@ -7,7 +7,8 @@
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
-    "deploy": "hardhat run scripts/1-deploy-script.js --network"
+    "deploy": "hardhat run scripts/1-deploy-all.js --network",
+    "deploymemestonk": "hardhat run scripts/2-deploy-memestonk.js --network"
   },
   "devDependencies": {
     "@ethersproject/providers": "^5.6.8",
