@@ -7,13 +7,13 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
-contract Memera is ERC20Permit, ERC20Burnable, ERC20Capped, AccessControl {
+contract MEEMToken is ERC20Permit, ERC20Burnable, ERC20Capped, AccessControl {
     
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     constructor()
-        ERC20("Memera","MEEM")
-        ERC20Permit("Memera")
+        ERC20("MEEM","MEEM")
+        ERC20Permit("MEEM")
         ERC20Capped((69 * (10 ** 9)) * (10 ** uint256(decimals())))
     {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);

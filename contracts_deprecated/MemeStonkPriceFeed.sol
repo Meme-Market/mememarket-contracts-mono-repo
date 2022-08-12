@@ -43,7 +43,7 @@ contract MemeStonkPriceFeed is ChainlinkClient, ConfirmedOwner {
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
 
         string memory _apiUri = string.concat(
-            "https://api.memeranch.info/trade/calculateBuyPrice?meme_id=", 
+            "https://api.meme.market/trade/calculateBuyPrice?meme_id=", 
             _memeId, 
             "&shares=", 
             Strings.toString(_shares)

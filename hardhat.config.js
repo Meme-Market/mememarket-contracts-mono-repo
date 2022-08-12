@@ -2,6 +2,8 @@ require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
+require("@nomiclabs/hardhat-waffle");
+require("@openzeppelin/hardhat-upgrades");
 
 module.exports = {
   defaultNetwork: "mumbai",
