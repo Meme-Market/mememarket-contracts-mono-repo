@@ -7,21 +7,22 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract MemeStonk is ERC1155, AccessControl, Pausable  {
+contract StonkStonk is ERC1155, AccessControl, Pausable  {
 
     /*///////////////////////////////////////////////////////////////////
     EVENTS
     //////////////////////////////////////////////////////////////////*/
 
-    event MemeUpdated(
-        bytes32 indexed memeId,
+    event StonkUpdated(
+        bytes32 indexed stonkId,
         uint256 indexed tokenId
     );
 
     event StonksBought(
         address indexed buyer,
-        bytes32 indexed memeId,
+        bytes32 indexed stonkId,
         uint256 indexed tokenId,
         uint256 totalStonks,
         uint256 totalPrice,
@@ -31,7 +32,7 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
 
     event StonksSold(
         address indexed seller,
-        bytes32 indexed memeId,
+        bytes32 indexed stonkId,
         uint256 indexed tokenId,
         uint256 totalStonks,
         uint256 totalPrice,
@@ -40,7 +41,7 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
     );
 
     event StonkPriceChanged(
-        bytes32 indexed memeId,
+        bytes32 indexed stonkId,
         uint256 indexed tokenId,
         uint256 newPrice
     );
@@ -57,14 +58,14 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
     uint256 public constant COST_PER_STONK = (10 ** 16);
     uint256 public constant BASE_PERCENTAGE = 100;
 
-    struct MemeData {
-        // @notice Author of the meme
+    struct StonkData {
+        // @notice Author of the meme of this stonk
         address author;
         // @notice Stonk token id
         uint256 stonkTokenId;
         // @notice Stonk token price in $MEEM tokens
         uint256 stonkTokenPrice;
-        // @notice Flag whether a meme is active
+        // @notice Flag whether a stonk is active
         bool active;
     }
 
@@ -72,8 +73,10 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
     VARIABLES
     //////////////////////////////////////////////////////////////////*/
 
-    // @notice Mapping from Meme ID to MemeData
-    mapping(bytes32 => MemeData) public memes;
+    // @notice Mapping from Stonk ID to StonkData
+    mapping(bytes32 => StonkData) public stonks;
+
+    string public baseURI;
 
     IERC20 public collateralToken;
 
@@ -93,8 +96,6 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(MODERATOR_ROLE, msg.sender);
-
-        setApprovalForAll(address(this), true);
     }
 
     /*///////////////////////////////////////////////////////////////////
@@ -104,7 +105,7 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
     function setURI(
         string memory _newuri
     ) public onlyRole(ADMIN_ROLE) {
-        _setURI(_newuri);
+        baseURI = _newuri;
     }
 
     function setCollateralToken(
@@ -125,60 +126,60 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
         platformFeeAddress = _address;
     }
 
-    function createMeme(
+    function createStonk(
         string memory _memeUUID,
         address _author
     ) public onlyRole(MODERATOR_ROLE) returns (bytes32) {
         
-        bytes32 _memeId = getMemeId(_memeUUID);
+        bytes32 _stonkId = getStonkId(_memeUUID);
 
-        require(!isCreated(_memeId), "Meme already exists!");
+        require(!isCreated(_stonkId), "Stonk already exists!");
 
-        uint256 _newTokenId = getTokenId(_memeId);
+        uint256 _newTokenId = getTokenId(_stonkId);
         uint256 _newTokenPrice = 0;
 
-        memes[_memeId] = MemeData({
+        stonks[_stonkId] = StonkData({
             author: _author,
             stonkTokenId: _newTokenId,
             stonkTokenPrice: _newTokenPrice,
             active: true
         });
 
-        emit MemeUpdated(_memeId, _newTokenId);
-        emit StonkPriceChanged(_memeId, _newTokenId, _newTokenPrice);
+        emit StonkUpdated(_stonkId, _newTokenId);
+        emit StonkPriceChanged(_stonkId, _newTokenId, _newTokenPrice);
 
-        return _memeId;
+        return _stonkId;
     }
 
-    function setMemeActive(
-        bytes32 _memeId,
+    function setStonkActive(
+        bytes32 _stonkId,
         bool _active
     ) public onlyRole(MODERATOR_ROLE) {
-        require(isCreated(_memeId), "Meme doesn't exist.");
+        require(isCreated(_stonkId), "Stonk doesn't exist.");
 
-        memes[_memeId].active = _active;
-        emit MemeUpdated(_memeId, memes[_memeId].stonkTokenId);
+        stonks[_stonkId].active = _active;
+        emit StonkUpdated(_stonkId, stonks[_stonkId].stonkTokenId);
     }
 
     function getStonkPrice(
-        bytes32 _memeId
+        bytes32 _stonkId
     ) public view returns (uint256, uint256) {
-        require(isCreated(_memeId), "Meme doesn't exist.");
-        require(isActive(_memeId), "Meme is not active currently.");
+        require(isCreated(_stonkId), "Stonk doesn't exist.");
+        require(isActive(_stonkId), "Stonk is not active currently.");
 
-        uint256 _bid = memes[_memeId].stonkTokenPrice;
-        uint256 _ask = memes[_memeId].stonkTokenPrice + COST_PER_STONK;
+        uint256 _bid = stonks[_stonkId].stonkTokenPrice;
+        uint256 _ask = stonks[_stonkId].stonkTokenPrice + COST_PER_STONK;
 
         return (_bid, _ask);
     }
 
     function getStonkBuyQuote(
-        bytes32 _memeId, 
+        bytes32 _stonkId, 
         uint256 _stonks
     ) public view returns (uint256, uint256, uint256, uint256, uint256) {
         require(_stonks >= ONE_STONK, "Need quantity of one stonk or greater");
 
-        (, uint256 _currentPrice) = getStonkPrice(_memeId);
+        (, uint256 _currentPrice) = getStonkPrice(_stonkId);
 
         uint256 _totalStonks = Math.ceilDiv(_stonks, ONE_STONK) * ONE_STONK;
         uint256 _stonksToBuy = ONE_STONK;
@@ -203,14 +204,14 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
     }
 
     function buyStonks(
-        bytes32 _memeId,
+        bytes32 _stonkId,
         uint256 _stonks
     ) public {
         (uint256 _totalStonks, 
         uint256 _totalPrice, 
         uint256 _totalFee, 
         uint256 _grandTotal, 
-        uint256 _newPrice) = getStonkBuyQuote(_memeId, _stonks);
+        uint256 _newPrice) = getStonkBuyQuote(_stonkId, _stonks);
 
         // Collect collateral + platform fee
         require(collateralToken.transferFrom(msg.sender, address(this), _grandTotal), "Funds transfer failed!");
@@ -219,21 +220,21 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
         require(collateralToken.transfer(platformFeeAddress, _totalFee), "Fee transfer failed");
 
         // Mint stonks
-        uint256 _tokenId = memes[_memeId].stonkTokenId;
+        uint256 _tokenId = stonks[_stonkId].stonkTokenId;
         _mint(msg.sender, _tokenId, _totalStonks, '');
 
-        _updateStonkTokenPrice(_memeId, _newPrice);  
+        _updateStonkTokenPrice(_stonkId, _newPrice);  
 
-        emit StonksBought(msg.sender, _memeId, _tokenId, _totalStonks, _totalPrice, _totalFee, _grandTotal);
+        emit StonksBought(msg.sender, _stonkId, _tokenId, _totalStonks, _totalPrice, _totalFee, _grandTotal);
     }
    
     function getStonkSellQuote(
-        bytes32 _memeId,
+        bytes32 _stonkId,
         uint256 _stonks
     ) public view returns (uint256, uint256, uint256, uint256, uint256) {
         require(_stonks >= ONE_STONK, "Need quantity of one stonk or greater");
         
-        (uint256 _currentPrice,) = getStonkPrice(_memeId);
+        (uint256 _currentPrice,) = getStonkPrice(_stonkId);
 
         uint256 _totalStonks = Math.ceilDiv(_stonks, ONE_STONK) * ONE_STONK;
         uint256 _stonksToSell = 0;
@@ -258,14 +259,14 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
     }
 
     function sellStonks(
-        bytes32 _memeId, 
+        bytes32 _stonkId, 
         uint256 _stonks
     ) public {
         (uint256 _totalStonks, 
         uint256 _totalPrice, 
         uint256 _totalFee, 
         uint256 _grandTotal, 
-        uint256 _newPrice) = getStonkSellQuote(_memeId, _stonks);
+        uint256 _newPrice) = getStonkSellQuote(_stonkId, _stonks);
 
         // Collect platform fee
         require(collateralToken.transfer(platformFeeAddress, _totalFee), "Fee transfer failed");
@@ -274,36 +275,36 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
         require(collateralToken.transfer(msg.sender, _grandTotal), "Funds transfer failed");
 
         // Burn stonks
-        uint256 _tokenId = memes[_memeId].stonkTokenId;
+        uint256 _tokenId = stonks[_stonkId].stonkTokenId;
         _burn(msg.sender, _tokenId, _totalStonks);
 
-        _updateStonkTokenPrice(_memeId, _newPrice);
+        _updateStonkTokenPrice(_stonkId, _newPrice);
 
-        emit StonksSold(msg.sender, _memeId, _tokenId, _totalStonks, _totalPrice, _totalFee, _grandTotal);
+        emit StonksSold(msg.sender, _stonkId, _tokenId, _totalStonks, _totalPrice, _totalFee, _grandTotal);
     }
 
-    function getMemeId(
+    function getStonkId(
         string memory _memeUUID
     ) public view returns (bytes32) {
         return keccak256(abi.encodePacked(address(this), _memeUUID));
     }
 
     function getTokenId(
-        bytes32 _memeId
+        bytes32 _stonkId
     ) public view returns (uint256) {
-        return  uint256(keccak256(abi.encodePacked(address(this), _memeId)));
+        return  uint256(keccak256(abi.encodePacked(address(this), _stonkId)));
     }
 
     function isCreated(
-        bytes32 _memeId
+        bytes32 _stonkId
     ) public view returns (bool) {
-        return memes[_memeId].stonkTokenId > 0;
+        return stonks[_stonkId].stonkTokenId > 0;
     }
 
     function isActive(
-        bytes32 _memeId
+        bytes32 _stonkId
     ) public view returns (bool) {
-        return memes[_memeId].active;
+        return stonks[_stonkId].active;
     }
 
     function pause() public onlyRole(ADMIN_ROLE) {
@@ -312,6 +313,21 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
 
     function unpause() public onlyRole(ADMIN_ROLE) {
         _unpause();
+    }
+
+    /*///////////////////////////////////////////////////////////////////
+    OVERRIDE FUNCTIONS
+    //////////////////////////////////////////////////////////////////*/
+
+    function uri(
+        uint256 _tokenId
+    ) public view virtual override returns (string memory) {
+        return string(
+            abi.encodePacked(
+                baseURI,
+                Strings.toString(_tokenId)
+            )
+        );
     }
 
     function supportsInterface(
@@ -357,18 +373,17 @@ contract MemeStonk is ERC1155, AccessControl, Pausable  {
         return 0x00;
     }
     
-
     /*///////////////////////////////////////////////////////////////////
     PRIVATE FUNCTIONS
     //////////////////////////////////////////////////////////////////*/
 
     function _updateStonkTokenPrice(
-        bytes32 _memeId, 
+        bytes32 _stonkId, 
         uint256 _newPrice
     ) private {
-        memes[_memeId].stonkTokenPrice = _newPrice;
+        stonks[_stonkId].stonkTokenPrice = _newPrice;
 
-        emit StonkPriceChanged(_memeId, memes[_memeId].stonkTokenId, _newPrice);
+        emit StonkPriceChanged(_stonkId, stonks[_stonkId].stonkTokenId, _newPrice);
     }
 
     function _getAllowance() private view returns(uint256){
