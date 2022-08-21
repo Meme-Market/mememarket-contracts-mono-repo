@@ -52,12 +52,12 @@ This application is built with the following packages/tech:
 
      - Defender is used as a relayer to process Meta Transactions. Meta Transaction (gasless transaction) is a concept, in the context of EVM, where a user does not need to pay for their blockchain transaction gas fees. Instead of gas fees, each user will pay a transaction fee in $MEEM to Meme Market to avoid spammy behavior. Below is the transaction flow:
 
-     1. User prepares the transaction on front-end
-     2. User signs the transaction using their browser or mobile wallet.
-     3. Signed transaction is sent to the back-end api
-     4. Signed transaction is processed and sent to Defender Relayer to be paid for and executed
-     5. Relayer pays for the gas fees & sends the transaction to the intended address
-     6. Transaction is securely executed on the blockchain
+       1. User prepares the transaction on front-end
+       2. User signs the transaction using their browser or mobile wallet.
+       3. Signed transaction is sent to the back-end api
+       4. Signed transaction is processed and sent to Defender Relayer to be paid for and executed
+       5. Relayer pays for the gas fees & sends the transaction to the intended address
+       6. Transaction is securely executed on the blockchain
 
 ## Authors
 
